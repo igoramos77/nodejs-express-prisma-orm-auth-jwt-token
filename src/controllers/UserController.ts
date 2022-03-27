@@ -6,9 +6,10 @@ const prisma = new PrismaClient();
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import Joi from 'joi';
+import AppError from '../errors/AppError';
 
-export default {
-
+class UserController {
+  
   //Auth 
 
   async auth(req: Request, res: Response) {
@@ -55,19 +56,19 @@ export default {
     } catch (error) {
       return res.status(404).json(error);
     }
-  },
+  };
 
   
   // Get all Users
 
-  async gelUsers(req: Request, res: Response) {
+  async getUsers(req: Request, res: Response) {
     try {
       let users = await prisma.user.findMany();
       return res.status(200).json(users);
     } catch (error) {
       return res.status(400).json(error);
     }
-  }, 
+  };
   
 
   // Create User
@@ -76,42 +77,42 @@ export default {
 
     const {matricula, password, firstName, lastName, email, photoUrl} = req.body;
 
-    const schema = Joi.object({
-      matricula: Joi.string().min(3).required(),
-      password: Joi.string().min(3).required(),
-      firstName: Joi.string().min(3).required(),
-      lastName: Joi.string().min(5).required(),
-      email: Joi.string().email({ minDomainSegments: 2 }),
-      photoUrl: Joi.string(),
+    let user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: email },
+          { matricula: matricula },
+        ]
+      }
     });
 
-    try {
-      const users = await prisma.user.create({
-        data: {
-          matricula: matricula,
-          password: password,
-          firstName: firstName,
-          lastName: lastName,
-          email: email,
-          photoUrl: photoUrl,
-        }
-      });
-
-      return res.status(200).json(users);
-    } catch (error) {
-      return res.status(400).json(error);
+    if (user) {
+      throw new AppError('Usuário já existe.', 400);
     }
-  }, 
+
+    user = await prisma.user.create({
+      data: {
+        matricula: matricula,
+        password: password,
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        photoUrl: photoUrl,
+      }
+    });
+
+    return res.json(user);
+  };
 
 
   // Update User
 
   async updateUser(req: Request, res: Response) {
-    const {matricula, password, firstName, lastName, email, photoUrl} = req.body;
+    const {matricula, firstName, lastName, email, photoUrl} = req.body;
     const {matricula: matriculaParam} = req.params;
 
     try {
-      let user =  await prisma.user.findUnique({
+      let user =  await prisma.user.findFirst({
         where: {
           matricula: matriculaParam,
         }
@@ -138,7 +139,7 @@ export default {
     } catch (error) {
       return res.status(400).json(error);
     }
-  }, 
+  };
 
 
   // Delete User
@@ -167,6 +168,7 @@ export default {
     } catch (error) {
       return res.status(400).json(error);
     }
-  }, 
+  };  
+}
 
-};
+export default UserController;
