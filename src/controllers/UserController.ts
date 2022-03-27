@@ -1,6 +1,6 @@
 import { Request, Response} from 'express';
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, User } from "@prisma/client";
 const prisma = new PrismaClient();
 
 import bcrypt from 'bcrypt';
@@ -19,18 +19,24 @@ export default {
     const { matricula, password } = req.body; 
 
     try {
-      const userPassword = await prisma.$queryRaw`SELECT password FROM "public"."User" WHERE matricula = ${matricula}`;
-      const userPasswordFormatted = userPassword[0].password;
+      const getUserPassword = await prisma.user.findUnique({
+        where: {
+          matricula: matricula,
+        },
+        select: {
+          password: true,
+        }
+      });
 
       const token = jwt.sign({ matricula }, jwtKey, {
         algorithm: "HS256",
         expiresIn: jwtExpirySeconds,
       });
       
-      const match = await bcrypt.compare(password, userPasswordFormatted);
+      const match = await bcrypt.compare(password, getUserPassword.password);
 
       if (match) {       
-        const user = await prisma.user.findFirst({
+        const user: User = await prisma.user.findFirst({
           where: {
             matricula: matricula
           }
