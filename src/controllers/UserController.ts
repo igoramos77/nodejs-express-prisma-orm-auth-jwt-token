@@ -107,8 +107,6 @@ export default {
   // Update User
 
   async updateUser(req: Request, res: Response) {
-
-
     const {matricula, password, firstName, lastName, email, photoUrl} = req.body;
     const {matricula: matriculaParam} = req.params;
 
@@ -137,6 +135,35 @@ export default {
       delete user.password;
 
       return res.status(200).json(user);
+    } catch (error) {
+      return res.status(400).json(error);
+    }
+  }, 
+
+
+  // Delete User
+
+  async deleteUser(req: Request, res: Response) {
+    const {matricula: matriculaParam} = req.params;
+
+    try {
+      let user =  await prisma.user.findUnique({
+        where: {
+          matricula: matriculaParam,
+        }
+      });
+
+      if (!user) return res.json("User not found.")
+
+      user = await prisma.user.delete({
+        where: {
+          matricula: matriculaParam
+        },
+      });
+
+      delete user.password;
+
+      return res.status(200).json({});
     } catch (error) {
       return res.status(400).json(error);
     }
