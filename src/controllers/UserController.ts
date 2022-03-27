@@ -15,46 +15,42 @@ class UserController {
   async auth(req: Request, res: Response) {
     const { matricula, password } = req.body; 
 
-    try {
-      const getUserPassword = await prisma.user.findUnique({
+    const getUserPassword = await prisma.user.findUnique({
+      where: {
+        matricula: matricula,
+      },
+      select: {
+        password: true,
+      }
+    });
+    
+    const match = await bcrypt.compare(password, getUserPassword.password);
+
+    if (match) {       
+      const user: User = await prisma.user.findFirst({
         where: {
-          matricula: matricula,
-        },
-        select: {
-          password: true,
+          matricula: matricula
         }
       });
-      
-      const match = await bcrypt.compare(password, getUserPassword.password);
 
-      if (match) {       
-        const user: User = await prisma.user.findFirst({
-          where: {
-            matricula: matricula
-          }
-        });
+      delete user.password;
 
-        delete user.password;
+      const jwtKey = process.env.JWT_SECRET;
+      const jwtExpirySeconds = 60 * 60 * 24 * 7; //7 days
 
-        const jwtKey = process.env.JWT_SECRET;
-        const jwtExpirySeconds = 60 * 60 * 24 * 7; //7 days
+      const token = jwt.sign({ matricula }, jwtKey, {
+        algorithm: "HS256",
+        expiresIn: jwtExpirySeconds,
+      });
 
-        const token = jwt.sign({ matricula }, jwtKey, {
-          algorithm: "HS256",
-          expiresIn: jwtExpirySeconds,
-        });
-
-        return res.status(200).json({
-          user: user,
-          token: token,
-          expires_in: jwtExpirySeconds,
-        });
-      }
-      else {
-        return res.status(404).json('User not found.')
-      }
-    } catch (error) {
-      return res.status(404).json(error);
+      return res.status(200).json({
+        user: user,
+        token: token,
+        expires_in: jwtExpirySeconds,
+      });
+    }
+    else {
+      return res.status(404).json('User not found.')
     }
   };
 
@@ -62,12 +58,8 @@ class UserController {
   // Get all Users
 
   async getUsers(req: Request, res: Response) {
-    try {
-      let users = await prisma.user.findMany();
-      return res.status(200).json(users);
-    } catch (error) {
-      return res.status(400).json(error);
-    }
+    let users = await prisma.user.findMany();
+    return res.status(200).json(users);
   };
   
 
@@ -111,34 +103,30 @@ class UserController {
     const {matricula, firstName, lastName, email, photoUrl} = req.body;
     const {matricula: matriculaParam} = req.params;
 
-    try {
-      let user =  await prisma.user.findFirst({
-        where: {
-          matricula: matriculaParam,
-        }
-      });
+    let user =  await prisma.user.findFirst({
+      where: {
+        matricula: matriculaParam,
+      }
+    });
 
-      if (!user) return res.json("User not found.")
+    if (!user) return res.json("User not found.")
 
-      user = await prisma.user.update({
-        where: {
-          matricula: matriculaParam
-        },
-        data: {
-          matricula: matricula,
-          firstName: firstName,
-          lastName: lastName,
-          email: email,
-          photoUrl: photoUrl,
-        }
-      });
+    user = await prisma.user.update({
+      where: {
+        matricula: matriculaParam
+      },
+      data: {
+        matricula: matricula,
+        firstName: firstName,
+        lastName: lastName,
+        email: email,
+        photoUrl: photoUrl,
+      }
+    });
 
-      delete user.password;
+    delete user.password;
 
-      return res.status(200).json(user);
-    } catch (error) {
-      return res.status(400).json(error);
-    }
+    return res.status(200).json(user);
   };
 
 
@@ -147,27 +135,23 @@ class UserController {
   async deleteUser(req: Request, res: Response) {
     const {matricula: matriculaParam} = req.params;
 
-    try {
-      let user =  await prisma.user.findUnique({
-        where: {
-          matricula: matriculaParam,
-        }
-      });
+    let user =  await prisma.user.findUnique({
+      where: {
+        matricula: matriculaParam,
+      }
+    });
 
-      if (!user) return res.json("User not found.")
+    if (!user) return res.json("User not found.")
 
-      user = await prisma.user.delete({
-        where: {
-          matricula: matriculaParam
-        },
-      });
+    user = await prisma.user.delete({
+      where: {
+        matricula: matriculaParam
+      },
+    });
 
-      delete user.password;
+    delete user.password;
 
-      return res.status(200).json({});
-    } catch (error) {
-      return res.status(400).json(error);
-    }
+    return res.status(200).json({});
   };  
 }
 

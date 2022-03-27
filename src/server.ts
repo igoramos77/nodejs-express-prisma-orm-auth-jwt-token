@@ -13,7 +13,6 @@ app.use(express.urlencoded());
 app.use(router);
 
 app.use(errors());
-
 app.use((error: Error, req: Request, res: Response, _: NextFunction) => {
 
   if (error instanceof AppError) {
