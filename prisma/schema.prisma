@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String                  @id @default(uuid())
+  matricula             String                  @unique
+  firstName             String
+  lastName              String
+  email                 String                  @unique
+  password              String
+  lastLogin             DateTime?
+  photoUrl              String?
+  isActive              Boolean                 @default(true)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+
+  ComplementaryActivity ComplementaryActivity[]
+}
+
+model ComplementaryActivity {
+  id               String   @id @default(uuid())
+  description      String
+  companyName      String
+  cnpj             String
+  informedTime     Int
+  integralizedTime Int      @default(0)
+  justification    String
+  certificateUrl   String
+  isActive         Boolean  @default(true)
+  status           EStatus  @default(waiting)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+}
+
+enum EStatus {
+  waiting
+  approved
+  recused
+}
